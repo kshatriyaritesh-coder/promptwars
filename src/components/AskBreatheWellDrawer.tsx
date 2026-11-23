@@ -5,7 +5,6 @@ import {
   Send,
   X, 
   Volume2, 
-  Sparkles, 
   KeyRound,
   RotateCcw
 } from 'lucide-react';
@@ -39,9 +38,7 @@ export const AskBreatheWellDrawer: React.FC<AskBreatheWellDrawerProps> = ({ isOp
     aqiData, 
     household, 
     language, 
-    speakText, 
-    stopSpeaking, 
-    isReadingAloud 
+    speakText
   } = useApp();
 
   const isHi = language === 'hi';

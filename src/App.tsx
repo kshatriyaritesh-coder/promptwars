@@ -17,7 +17,7 @@ import { MemberDetailModal } from './components/MemberDetailModal';
 import { AddMemberModal } from './components/AddMemberModal';
 
 export const AppContent: React.FC = () => {
-  const { activeTab, seniorMode, language } = useApp();
+  const { activeTab, seniorMode } = useApp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [aiDrawerOpen, setAiDrawerOpen] = useState(false);
   const [customizeOpen, setCustomizeOpen] = useState(false);

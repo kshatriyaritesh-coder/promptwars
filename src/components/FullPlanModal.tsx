@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Sun, ShieldCheck, Home, Users, FileDown, Leaf, AlertTriangle } from 'lucide-react';
+import { X, Sun, ShieldCheck, Home, FileDown, AlertTriangle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { exportPlanAsPdf } from '../utils/pdfGenerator';
 

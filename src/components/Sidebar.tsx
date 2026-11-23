@@ -8,8 +8,7 @@ import {
   Leaf, 
   MapPin, 
   ChevronDown, 
-  X,
-  Sparkles
+  X
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { SUPPORTED_CITIES } from '../services/aqiService';
@@ -20,7 +19,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) => {
-  const { activeTab, setActiveTab, household, setCity, language, t } = useApp();
+  const { activeTab, setActiveTab, household, setCity, language } = useApp();
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
   const isHi = language === 'hi';
 

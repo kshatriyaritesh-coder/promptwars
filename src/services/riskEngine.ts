@@ -1,4 +1,4 @@
-import { AirQualityData, FamilyMember, MemberRiskAssessment, DailySmogPlan, RiskLevel, AQICategory } from '../types';
+import { AirQualityData, FamilyMember, MemberRiskAssessment, DailySmogPlan, RiskLevel } from '../types';
 
 export function isVulnerableMember(member: FamilyMember): boolean {
   if (member.age < 12 || member.age >= 60) return true;

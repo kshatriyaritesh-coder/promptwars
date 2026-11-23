@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, ShieldAlert, Heart, User, Sparkles } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 interface MemberDetailModalProps {

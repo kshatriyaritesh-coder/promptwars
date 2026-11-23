@@ -2,7 +2,6 @@ import React from 'react';
 import { 
   AlertTriangle, 
   Clock, 
-  ShieldCheck, 
   Wind, 
   MapPin, 
   HeartPulse, 

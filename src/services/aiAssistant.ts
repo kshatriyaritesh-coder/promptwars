@@ -1,4 +1,4 @@
-import { AirQualityData, FamilyMember, ChatMessage } from '../types';
+import { AirQualityData, FamilyMember } from '../types';
 
 interface ContextPayload {
   aqiData: AirQualityData;

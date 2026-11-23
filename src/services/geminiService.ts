@@ -140,7 +140,7 @@ Core Guidelines:
         contents: [
             ...conversationHistory
               .slice(-10)
-              .filter((message, index, history) =>
+              .filter((message, index) =>
                 !(index === 0 && message.sender === 'assistant') &&
                 (message.text || '').trim().length > 0
               )

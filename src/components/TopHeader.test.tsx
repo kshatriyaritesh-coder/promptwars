@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useApp } from '../context/AppContext';
 import { PERSONA_PRESETS } from '../data/personas';
+import { translations } from '../i18n/translations';
 import { fetchCityAirQuality } from '../services/aqiService';
 import { generateDailySmogPlan } from '../services/riskEngine';
 import { TopHeader } from './TopHeader';
@@ -11,16 +12,17 @@ vi.mock('../context/AppContext', () => ({
 }));
 
 const mockedUseApp = vi.mocked(useApp);
+type AppContextValue = ReturnType<typeof useApp>;
 const household = PERSONA_PRESETS[0].household;
 const baseAqi = fetchCityAirQuality('Delhi NCR');
 
-function makeContext(overrides: Partial<ReturnType<typeof useApp>> = {}) {
+function makeContext(overrides: Partial<AppContextValue> = {}): AppContextValue {
   return {
     activeTab: 'overview',
     setActiveTab: vi.fn(),
-    language: 'en' as const,
+    language: 'en',
     setLanguage: vi.fn(),
-    t: {} as ReturnType<typeof useApp>['t'],
+    t: translations.en,
     selectedPersonaId: 'priya',
     selectPersona: vi.fn(),
     household,
@@ -45,10 +47,10 @@ function makeContext(overrides: Partial<ReturnType<typeof useApp>> = {}) {
     alertNotification: null,
     dismissAlert: vi.fn(),
     ...overrides
-  } as ReturnType<typeof useApp>;
+  };
 }
 
-function renderHeader(context = makeContext()) {
+function renderHeader(context: AppContextValue = makeContext()) {
   mockedUseApp.mockReturnValue(context);
   render(<TopHeader onOpenMobileMenu={vi.fn()} onOpenCustomize={vi.fn()} />);
   return context;
@@ -87,9 +89,13 @@ describe('TopHeader', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Listen to air brief' }));
 
-    const spokenBrief = vi.mocked(context.speakText).mock.calls[0][0];
-    expect(spokenBrief).toContain('avoid nonessential outdoor activity');
-    expect(spokenBrief).not.toContain('Best outdoor window:');
+    expect(context.speakText).toHaveBeenCalledOnce();
+    expect(context.speakText).toHaveBeenCalledWith(
+      expect.stringContaining('avoid nonessential outdoor activity')
+    );
+    expect(context.speakText).not.toHaveBeenCalledWith(
+      expect.stringContaining('Best outdoor window:')
+    );
   });
 
   it('closes the language picker with Escape and returns focus to its trigger', () => {
