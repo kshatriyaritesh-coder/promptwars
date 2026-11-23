@@ -197,6 +197,7 @@ export interface ChatMessage {
   suggestedQuestions?: string[];
   suggestedQuestionsHi?: string[];
   isWarning?: boolean;
+  isGeminiPowered?: boolean;
 }
 
 export interface UserHousehold {

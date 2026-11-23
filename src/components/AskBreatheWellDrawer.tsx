@@ -2,11 +2,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   Bot, 
   User, 
-  Send, 
+  Send,
   X, 
   Volume2, 
   Sparkles, 
-  KeyRound
+  KeyRound,
+  RotateCcw
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { askGeminiOrLocalRAG } from '../services/geminiService';
@@ -15,6 +16,22 @@ import { ChatMessage } from '../types';
 interface AskBreatheWellDrawerProps {
   isOpen: boolean;
   onClose: () => void;
+}
+
+function formatAssistantText(text: string): string {
+  const escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  const formatted = escaped
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/(^|\n)([-•])\s+(.+)/g, '$1<div class="flex gap-1.5"><span>•</span><span>$3</span></div>')
+    .replace(/(^|\n)(\d+)\.\s+(.+)/g, '$1<div class="flex gap-1.5"><span>$2.</span><span>$3</span></div>')
+    .replace(/\n/g, '<br />');
+
+  return formatted;
 }
 
 export const AskBreatheWellDrawer: React.FC<AskBreatheWellDrawerProps> = ({ isOpen, onClose }) => {
@@ -77,30 +94,61 @@ export const AskBreatheWellDrawer: React.FC<AskBreatheWellDrawerProps> = ({ isOp
     setInputQuestion('');
     setIsTyping(true);
 
-    const result = await askGeminiOrLocalRAG({
-      question: q,
-      aqiData,
-      members: household.members,
-      language,
-      customApiKey: apiKeyInput
-    });
+    try {
+      const result = await askGeminiOrLocalRAG({
+        question: q,
+        aqiData,
+        members: household.members,
+        language,
+        customApiKey: apiKeyInput,
+        conversationHistory: messages
+      });
 
-    const botMsg: ChatMessage = {
-      id: `msg-resp-${Date.now()}`,
-      sender: 'assistant',
-      text: result.replyText,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      isWarning: result.isWarning,
-      suggestedQuestions: result.suggestedQuestions
-    };
+      const botMsg: ChatMessage = {
+        id: `msg-resp-${Date.now()}`,
+        sender: 'assistant',
+        text: result.replyText,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        isWarning: result.isWarning,
+        suggestedQuestions: result.suggestedQuestions,
+        isGeminiPowered: result.isGeminiPowered
+      };
 
-    setMessages(prev => [...prev, botMsg]);
-    setIsTyping(false);
+      setMessages(prev => [...prev, botMsg]);
+    } catch {
+      setMessages(prev => [...prev, {
+        id: `msg-error-${Date.now()}`,
+        sender: 'assistant',
+        text: isHi
+          ? 'क्षमा करें, अभी जवाब तैयार नहीं हो पाया। कृपया फिर कोशिश करें।'
+          : 'Sorry, I could not prepare a response right now. Please try again.',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        isWarning: false,
+        suggestedQuestions: isHi
+          ? ['क्या मुझे प्यूरीफायर चलाना चाहिए?', 'बाहर टहलने का समय क्या है?']
+          : ['Should I run my purifier?', 'When is it safe to go outside?']
+      }]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   const handleSaveApiKey = (key: string) => {
     setApiKeyInput(key);
     localStorage.setItem('saans_gemini_key', key.trim());
+  };
+
+  const handleClearChat = () => {
+    setMessages([{
+      id: `msg-reset-${Date.now()}`,
+      sender: 'assistant',
+      text: isHi
+        ? `नमस्ते! मैं आपका **BreatheWell AI साथी** हूँ। मैं ${household.city} के AQI ${aqiData.aqi} और आपके परिवार की जानकारी के साथ आपकी मदद कर सकता हूँ।`
+        : `Hello! I am your **BreatheWell AI companion**. I can help using the live ${household.city} AQI of ${aqiData.aqi} and your household context.`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isGeminiPowered: false
+    }]);
+    setInputQuestion('');
   };
 
   return (
@@ -120,7 +168,7 @@ export const AskBreatheWellDrawer: React.FC<AskBreatheWellDrawerProps> = ({ isOp
               <div className="flex items-center gap-1.5">
                 <h3 className="font-bold text-sm leading-tight text-white">Ask BreatheWell</h3>
                 <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#13594c] text-[#5eead4]">
-                  Gemini + RAG
+                  AI CHAT
                 </span>
               </div>
               <p className="text-[11px] text-[#8ab3a8]">
@@ -130,6 +178,13 @@ export const AskBreatheWellDrawer: React.FC<AskBreatheWellDrawerProps> = ({ isOp
           </div>
 
           <div className="flex items-center gap-1">
+            <button
+              onClick={handleClearChat}
+              className="p-1.5 rounded-lg text-[#8ab3a8] hover:text-white hover:bg-[#104b40] transition"
+              title="Clear conversation"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
             <button
               onClick={() => setShowKeyInput(!showKeyInput)}
               className={`p-1.5 rounded-lg text-[#8ab3a8] hover:text-white transition ${showKeyInput ? 'bg-[#104b40] text-white' : ''}`}
@@ -199,13 +254,23 @@ export const AskBreatheWellDrawer: React.FC<AskBreatheWellDrawerProps> = ({ isOp
                         : 'bg-white border border-[#e5ebe5] text-slate-800 rounded-tl-none shadow-xs'
                     }`}
                   >
-                    <div className="whitespace-pre-line">
-                      {m.text}
-                    </div>
+                    <div
+                      className="leading-relaxed"
+                      dangerouslySetInnerHTML={{
+                        __html: formatAssistantText(m.text)
+                      }}
+                    />
 
                     {!isUser && (
                       <div className="flex items-center justify-between pt-2 mt-2 border-t border-slate-100 text-[10px] text-slate-400">
-                        <span>{m.timestamp}</span>
+                        <span>
+                          {m.timestamp}
+                          {m.isGeminiPowered !== undefined && (
+                            <span className="ml-1.5 text-teal-600">
+                              · {m.isGeminiPowered ? 'Gemini' : 'Local'}
+                            </span>
+                          )}
+                        </span>
                         <button
                           onClick={() => speakText(m.text)}
                           className="hover:text-teal-700 font-semibold flex items-center gap-1"

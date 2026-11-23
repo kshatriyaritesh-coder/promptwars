@@ -2,7 +2,7 @@
 
 ## Overview
 
-BreatheWell is a client-side Progressive Web Application (PWA) built with React 18, TypeScript, and Vite. It provides India's urban families a hyper-local, personalized air quality intelligence dashboard using live CPCB/WAQI AQI data, a rule-based household risk engine, and Google Gemini 1.5 Flash for natural-language health guidance.
+BreatheWell is a client-side Progressive Web Application (PWA) built with React 18, TypeScript, and Vite. It provides India's urban families a hyper-local, personalized air quality intelligence dashboard using live CPCB/WAQI AQI data, a rule-based household risk engine, and Google Gemini 2.5 Flash for natural-language health guidance.
 
 ---
 
@@ -15,7 +15,7 @@ flowchart TD
         CTX["AppContext (React Context API)\nGlobal state: AQI, Household,\nLanguage, Senior Mode, Speech"]
         AQI["aqiService.ts\nLive WAQI REST API\nCPCB AQI calculator\nDiurnal curve model"]
         RISK["riskEngine.ts\nPersonalised risk = f(AQI) × vulnerability\n8 health condition tiers\nSmog Action Plan generator"]
-        GEM["geminiService.ts\nGemini 1.5 Flash REST API\nSystem-prompt injection\nTimeout + error boundary\nFalls back → aiAssistant.ts"]
+        GEM["geminiService.ts\nGemini 2.5 Flash REST API\nSystem-prompt injection\nTimeout + error boundary\nFalls back → aiAssistant.ts"]
         RAG["aiAssistant.ts\nLocal grounded RAG engine\nCPCB / WHO / ICMR rules\nMedical triage escalation\nDual-language (EN / HI)"]
         TRK["trackerService.ts\nLow-emission habit logger\nCO₂ & PM2.5 delta calc\nStreak + badge engine"]
         PDF["pdfGenerator.ts\njsPDF client-side export\nFamily smog plan PDF"]
@@ -24,7 +24,7 @@ flowchart TD
 
     subgraph External["External APIs (CDN fetch)"]
         WAQI["WAQI API\napi.waqi.info\nLive station AQI feed\n8 Indian cities"]
-        GEMAPI["Google Gemini API\ngenerationlanguage.googleapis.com\nGemini 1.5 Flash"]
+        GEMAPI["Google Gemini API\ngenerationlanguage.googleapis.com\nGemini 2.5 Flash"]
     end
 
     UI --> CTX
@@ -69,7 +69,7 @@ Condition multipliers: Asthma/COPD ×2.0 · Heart Disease ×1.9 · Pregnancy ×1
 ```
 User Question
   → geminiService.ts (builds context-grounded system prompt with live AQI + member profiles)
-  → Gemini 1.5 Flash REST API (POST with AbortController 15 s timeout)
+  → Gemini 2.5 Flash REST API (POST with AbortController 15 s timeout)
       ↓ success → structured JSON reply + suggested follow-up questions
       ↓ error / no key → aiAssistant.ts local RAG (keyword + triage fallback)
   → Response displayed in AskBreatheWellDrawer
@@ -108,7 +108,7 @@ promptwars/
 │   │   └── AppContext.tsx        ← Central React Context state
 │   ├── services/                 ← Pure business logic + API integrations
 │   │   ├── aqiService.ts         ← WAQI API + CPCB AQI calc + diurnal curve
-│   │   ├── geminiService.ts      ← Gemini 1.5 Flash REST integration
+│   │   ├── geminiService.ts      ← Gemini 2.5 Flash REST integration
 │   │   ├── aiAssistant.ts        ← Local grounded RAG fallback
 │   │   ├── riskEngine.ts         ← Personalised risk engine + plan generator
 │   │   └── trackerService.ts     ← Low-emission habit + CO₂ calculator
@@ -145,7 +145,7 @@ promptwars/
 | Styling | Tailwind CSS 3 | Utility-first; zero runtime CSS overhead |
 | Charts | Recharts | Lightweight SVG diurnal forecast charts |
 | PDF | jsPDF | 100% client-side; no server or external service needed |
-| AI | Google Gemini 1.5 Flash | Sponsor API; prompt-engineered for AQI + clinical triage |
+| AI | Google Gemini 2.5 Flash | Sponsor API; prompt-engineered for AQI + clinical triage |
 | AQI Data | WAQI REST API | Real-time station feeds for 8 major Indian cities |
 | State | React Context + localStorage | PWA-ready; works offline after first load |
 
@@ -158,8 +158,8 @@ promptwars/
 - **Auth**: Token via `VITE_WAQI_API_TOKEN` environment variable
 - **Fallback**: Seasonal offline estimate if fetch fails or token missing
 
-### Google Gemini 1.5 Flash
-- **Endpoint**: `https://generationlanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key}`
+### Google Gemini 2.5 Flash
+- **Endpoint**: `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={key}`
 - **Auth**: API key via `VITE_GEMINI_API_KEY` or user-entered at runtime
 - **System Prompt**: Injects live AQI, city, dominant pollutant, weather, member vulnerability matrix, CPCB/WHO/ICMR protocols, and emergency medical triage rules
 - **Timeout**: 15-second `AbortController` with clean error boundary

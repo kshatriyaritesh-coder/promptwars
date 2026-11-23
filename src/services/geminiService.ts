@@ -7,6 +7,7 @@ interface GeminiRequestPayload {
   members: FamilyMember[];
   language: 'en' | 'hi';
   customApiKey?: string;
+  conversationHistory?: Array<{ sender: 'user' | 'assistant'; text: string }>;
 }
 
 interface GeminiResponse {
@@ -17,7 +18,7 @@ interface GeminiResponse {
 }
 
 export async function askGeminiOrLocalRAG(payload: GeminiRequestPayload): Promise<GeminiResponse> {
-  const { question, aqiData, members, language, customApiKey } = payload;
+  const { question, aqiData, members, language, customApiKey, conversationHistory = [] } = payload;
   const isHi = language === 'hi';
 
   const emergencyKeywords = [
@@ -43,6 +44,43 @@ export async function askGeminiOrLocalRAG(payload: GeminiRequestPayload): Promis
     };
   }
 
+  const normalizedQuestion = question
+    .toLowerCase()
+    .replace(/\baqiiis\b/g, 'aqi')
+    .replace(/\baqiis\b/g, 'aqi')
+    .replace(/\baqii\b/g, 'aqi');
+  const mentionedAqiMatch = normalizedQuestion.match(/\baqi\s*(?:is|at|=|of|:)?\s*(\d{2,4})/i);
+  const asksAqiAction = /(?:what\s+(?:should|do|can|will)|need\s+(?:to\s+)?do|i\s+need|guidance|advice|safe|precaution)/i.test(normalizedQuestion);
+
+  if (mentionedAqiMatch && asksAqiAction) {
+    const fallback = generateAssistantReply(question, { aqiData, members, language });
+    return {
+      replyText: fallback.replyText,
+      isWarning: fallback.isWarning,
+      suggestedQuestions: fallback.suggestedQuestions,
+      isGeminiPowered: false
+    };
+  }
+
+  const directLocalPatterns = [
+    /\b(child|children|kid|kids|school)\b/i,
+    /(?:स्कूल|बच्च)/i,
+    /\b(mask|n95|ffp2)\b/i,
+    /(?:मास्क)/i,
+    /\b(purifier|plant|window|ventilation|walk|morning)\b/i,
+    /(?:प्यूरीफायर|पौध|खिड़क|हवा|टहल|सुबह)/i
+  ];
+
+  if (directLocalPatterns.some(pattern => pattern.test(question))) {
+    const fallback = generateAssistantReply(question, { aqiData, members, language });
+    return {
+      replyText: fallback.replyText,
+      isWarning: fallback.isWarning,
+      suggestedQuestions: fallback.suggestedQuestions,
+      isGeminiPowered: false
+    };
+  }
+
   const apiKey = customApiKey?.trim() || import.meta.env.VITE_GEMINI_API_KEY?.trim() || '';
 
   if (!apiKey) {
@@ -62,6 +100,12 @@ export async function askGeminiOrLocalRAG(payload: GeminiRequestPayload): Promis
 
     const systemPrompt = `You are BreatheWell AI, an expert environmental health specialist and clinical smog prevention assistant grounded in official CPCB (Central Pollution Control Board of India), WHO Guidelines for Ambient & Indoor Air Quality, and ICMR (Indian Council of Medical Research) advisories.
 
+Conversation behavior:
+- Act as a helpful, conversational assistant and remember the conversation context.
+- Answer general follow-ups naturally, especially when they refer to a previous answer.
+- Stay grounded in the live AQI and household context below.
+- If the user asks about a topic outside air quality or health, answer briefly and then gently connect it to their request or BreatheWell context where relevant.
+
 Current Real-Time Atmospheric & Health Context:
 - City: ${aqiData.city}
 - Station: ${aqiData.stationName} (${aqiData.stationDistanceKm} km away)
@@ -80,42 +124,59 @@ Core Guidelines:
 5. Keep response clear, structured with markdown bold points, highly actionable, empathetic, and concise (under 180 words).`;
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 9000);
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    let response: Response;
+    try {
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
 
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      signal: controller.signal,
-      body: JSON.stringify({
+      response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
         contents: [
-          {
-            role: 'user',
-            parts: [
-              {
-                text: `${systemPrompt}\n\nUser Question: ${question}`
-              }
-            ]
+            ...conversationHistory
+              .slice(-10)
+              .filter((message, index, history) =>
+                !(index === 0 && message.sender === 'assistant') &&
+                (message.text || '').trim().length > 0
+              )
+              .map((message) => ({
+                role: message.sender === 'user' ? 'user' : 'model',
+                parts: [{ text: message.text }]
+              })),
+            {
+              role: 'user',
+              parts: [
+                {
+                  text: `${systemPrompt}\n\nUser Question: ${question}`
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.35,
+            maxOutputTokens: 600
           }
-        ],
-        generationConfig: {
-          temperature: 0.35,
-          maxOutputTokens: 600
-        }
-      })
-    });
-
-    clearTimeout(timeoutId);
+        })
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`Gemini API error: ${response.status}${errorText ? ` - ${errorText.slice(0, 200)}` : ''}`);
     }
 
     const data = await response.json();
-    const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    const generatedText = data.candidates?.[0]?.content?.parts
+      ?.map((part: { text?: string }) => part.text)
+      .filter((text: string | undefined): text is string => Boolean(text))
+      .join('\n');
 
     if (!generatedText) {
       throw new Error('Empty Gemini response parts');

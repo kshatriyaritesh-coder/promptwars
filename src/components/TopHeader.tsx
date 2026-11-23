@@ -45,7 +45,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenMobileMenu, onOpenCu
   const isHi = language === 'hi';
 
   const tabTitleMap: Record<string, string> = {
-    overview: isHi ? 'सिंहावलोकन' : 'Air quality',
+    overview: isHi ? 'सिंहावलोकन' : 'Overview',
     plan: isHi ? 'दैनिक योजना' : 'Air quality',
     air_quality: isHi ? 'वायु गुणवत्ता' : 'Air quality',
     forecast: isHi ? 'पूर्वानुमान' : 'Air quality',

@@ -36,6 +36,117 @@ export function generateAssistantReply(
     };
   }
 
+  const greetingOnly = /^(hi|hello|hey|namaste|नमस्ते|hii?|good (morning|evening|afternoon))[!.\s]*$/i.test(q);
+  if (greetingOnly) {
+    return {
+      replyText: isHi
+        ? `नमस्ते! मैं **BreatheWell AI** हूँ। मैं AQI, मास्क, प्यूरीफायर, खिड़कियों की वेंटिलेशन, बच्चों/बुजुर्गों की सुरक्षा और आज की बाहरी गतिविधियों पर बातचीत में मदद कर सकता हूँ। आप क्या जानना चाहते हैं?`
+        : `Hello! I’m **BreatheWell AI**. I can chat with you about AQI, masks, purifiers, ventilation, vulnerable family members, outdoor activity, and today’s air safety plan. What would you like to discuss?`,
+      isWarning: false,
+      suggestedQuestions: isHi
+        ? ['आज का AQI कितना है?', 'मुझे बाहर जाना चाहिए?', 'प्यूरीफायर कब चलाएं?']
+        : ['What is today’s AQI?', 'Should I go outside?', 'When should I run my purifier?']
+    };
+  }
+
+  if (/\b(thanks|thank you|धन्यवाद|thanks a lot)\b/i.test(q)) {
+    return {
+      replyText: isHi
+        ? 'आपका स्वागत है! यदि आप चाहें, तो हम उसी विषय को आगे विस्तार से समझ सकते हैं—उदाहरण के लिए मास्क, वेंटिलेशन या परिवार के किसी सदस्य के लिए खास सलाह।'
+        : 'You’re welcome! We can continue on the same topic—for example, masks, ventilation, or a specific precaution for someone in your household.',
+      isWarning: false,
+      suggestedQuestions: isHi
+        ? ['मास्क फिटिंग कैसे जांचें?', 'आज परिवार की योजना क्या है?']
+        : ['How do I check a mask fit?', 'What is my family’s plan today?']
+    };
+  }
+
+  const childKeywords = ['child', 'children', 'kid', 'kids', 'school', 'स्कूल', 'बच्च', 'kids'];
+  if (childKeywords.some(keyword => q.includes(keyword))) {
+    if (isHi) {
+      return {
+        replyText: `आज ${aqiData.city} में AQI **${aqiData.aqi} (${aqiData.cpcbCategory})** है। बच्चों के लिए आज की योजना:\n\n1. **बाहर की गतिविधि:** भारी खेल और सुबह-सुबह दौड़ से बचें। यदि बाहर जाना ज़रूरी हो तो कम प्रदूषण वाले समय में जाएं और पेड पर जाएं।\n2. **मास्क:** बाहर जाते समय बच्चे के चेहरे पर ठीक से फिट होने वाला **pediatric N95/FFP2** मास्क लगाएं। ढीला या वॉल्व वाला मास्क न दें।\n3. **स्कूल:** आज रेस, पीटी और स्कूल के खुले मैदान में खेल सीमित रखें; कक्षा के भीतर ही हल्की गतिविधि बेहतर है।\n4. **घर में:** खिड़कियां बंद रखें, HEPA प्यूरीफायर चलाएं और घर में धूल झाड़ने, अगरबत्ती या धुआं पैदा करने वाली चीजों से बचें।\n5. **लक्षण:** खांसी, सांस तेज चलना, सीने में दबाव या नीला होंठ दिखे तो गतिविधि रोककर तुरंत चिकित्सा सहायता लें।`,
+        isWarning: aqiData.aqi >= 200,
+        suggestedQuestions: ['बच्चों के लिए N95 कैसे जांचें?', 'क्या बच्चे स्कूल जा सकते हैं?', 'घर में प्यूरीफायर कब चलाएं?']
+      };
+    }
+
+    return {
+      replyText: `Today in ${aqiData.city}, AQI is **${aqiData.aqi} (${aqiData.cpcbCategory})**. Here is a practical plan for children:\n\n1. **Outdoor activity:** Avoid heavy play, long outdoor recess, and early-morning exertion. Keep essential trips short.\n2. **Mask:** Use a properly fitted, certified **Pediatric N95/FFP2** for unavoidable outdoor travel. It should seal around the cheeks and nose without gaps.\n3. **School:** Pause sports, outdoor PE, and prolonged playground time today. Prefer indoor movement when possible.\n4. **Indoor air:** Keep windows sealed, run a True HEPA purifier in a closed room, and avoid incense, smoke, dry sweeping, and mosquito coils.\n5. **Symptoms:** Stop activity and seek prompt medical care for chest pain, unusual breathlessness, blue lips, confusion, or severe coughing.`,
+      isWarning: aqiData.aqi >= 200,
+      suggestedQuestions: ['How do I check a child’s N95 fit?', 'Can my child attend school today?', 'When should I run the purifier?']
+    };
+  }
+
+  const normalizedQuestion = q
+    .replace(/\baqiiis\b/g, 'aqi')
+    .replace(/\baqiis\b/g, 'aqi')
+    .replace(/\baqii\b/g, 'aqi')
+    .replace(/(\b(?:aqi|aqi))\s*(?:is|at|=|of|:)?\s*(\d{2,4})/i, '$1 $2');
+  const mentionedAqiMatch = normalizedQuestion.match(/\baqi\s*(?:is|at|=|of|:)?\s*(\d{2,4})/i);
+  const asksAqiAction = q.includes('what should') ||
+    q.includes('what to do') ||
+    q.includes('need to do') ||
+    q.includes('need i do') ||
+    q.includes('i need') ||
+    q.includes('what can i do') ||
+    q.includes('how should i') ||
+    q.includes('what do i') ||
+    q.includes('what will i') ||
+    q.includes('guidance') ||
+    q.includes('advice') ||
+    q.includes('क्या करना') ||
+    q.includes('करना चाहिए') ||
+    q.includes('क्या करें');
+
+  if (mentionedAqiMatch && asksAqiAction) {
+    const mentionedAqi = Number(mentionedAqiMatch[1]);
+    const effectiveAqi = Number.isFinite(mentionedAqi) ? mentionedAqi : aqiData.aqi;
+
+    if (effectiveAqi >= 301) {
+      if (isHi) {
+        return {
+          replyText: `⚠️ **AQI ${effectiveAqi} बहुत गंभीर स्थिति है।** बाहर जाना केवल बहुत ज़रूरी होने पर ही करें।\n\n1. **घर के भीतर रहें:** खिड़की-दरवाज़े बंद रखें, HEPA/H13 प्यूरीफायर को बंद कमरे में चालू रखें और वेंटिलेशन का उपयोग न करें।\n2. **बाहर निकलना हो:** केवल अच्छी तरह फिट हुआ प्रमाणित **N95/FFP2 मास्क** पहनें। बच्चों, बुजुर्गों और दमा/हृदय रोग वाले सदस्यों को बाहर न भेजें।\n3. **घर के काम:** धूल झाड़ने या अगरबत्ती/धूप जलाने से बचें; गीला पोछा लगाएं।\n4. **लक्षण हों:** सांस लेने में कठिनाई, सीने में दर्द या होश न रहने जैसे लक्षण दिखें तो तुरंत **112/108** पर कॉल करें।`,
+          isWarning: true,
+          suggestedQuestions: [
+            'बच्चों के लिए कौन सा मास्क सुरक्षित है?',
+            'अगर बाहर जाना ज़रूरी हो तो क्या सावधानी रखें?',
+            'घर की हवा फिल्टर करने के उपाय'
+          ]
+        };
+      }
+
+      return {
+        replyText: `⚠️ **AQI ${effectiveAqi} is a severe emergency-level condition.** Avoid all non-essential outdoor activity.\n\n1. **Stay indoors:** Keep doors and windows sealed and run a True HEPA/H13 purifier in a closed room.\n2. **If travel is unavoidable:** Wear a well-fitted, certified **N95/FFP2 mask**. Do not take children, older adults, or people with asthma or heart disease outside unless essential.\n3. **Inside the home:** Do not dry-sweep, burn incense, or use mosquito coils. Wet-mop floors instead.\n4. **Medical warning:** Severe breathlessness, chest pain, confusion, or blue lips require immediate emergency care—call **112/108**.`,
+        isWarning: true,
+        suggestedQuestions: [
+          'What mask is safest for a child?',
+          'How do I choose a HEPA purifier?',
+          'Which indoor activities should I avoid?'
+        ]
+      };
+    }
+
+    if (effectiveAqi >= 201) {
+      const guidance = isHi
+        ? `AQI **${effectiveAqi} (बहुत खराब)** है। लंबे समय तक बाहर रहने से बचें। बाहर जाने पर प्रमाणित N95/FFP2 मास्क पहनें, बच्चे और बुजुर्ग बाहर की कसरत न करें, खिड़कियां बंद रखें और HEPA प्यूरीफायर चलाएं।`
+        : `AQI **${effectiveAqi} (Very Poor)** means you should limit prolonged outdoor exposure. Wear a well-fitted certified N95/FFP2 mask outside, avoid outdoor exercise for vulnerable people, seal windows, and run a HEPA purifier.`;
+      return { replyText: guidance, isWarning: true, suggestedQuestions: isHi ? ['बच्चों के लिए मास्क गाइड', 'आज प्यूरीफायर कब चलाएं?'] : ['Mask guidance for children', 'How should I run the purifier today?'] };
+    }
+
+    if (effectiveAqi >= 101) {
+      const guidance = isHi
+        ? `AQI **${effectiveAqi} (मध्यम)** है। संवेदनशील लोगों को लंबी या भारी बाहरी गतिविधि सीमित रखनी चाहिए। बाहर जाते समय अच्छे फिट वाला N95 मास्क लें, और घर में प्यूरीफायर चलाएं।`
+        : `AQI **${effectiveAqi} (Moderate)** means sensitive people should limit prolonged or strenuous outdoor activity. Use a well-fitted mask outside if needed and run a HEPA purifier indoors.`;
+      return { replyText: guidance, isWarning: false, suggestedQuestions: isHi ? ['आज बाहर टहलने का समय?', 'खिड़कियां कब खोलें?'] : ['Is a morning walk safe?', 'When should I open windows?'] };
+    }
+
+    const guidance = isHi
+      ? `AQI **${effectiveAqi}** सामान्य या अच्छे स्तर का है। सामान्य बाहरी गतिविधि सुरक्षित हो सकती है, लेकिन संवेदनशील लोगों को लक्षणों पर नजर रखनी चाहिए।`
+      : `AQI **${effectiveAqi}** is in the satisfactory or good range. Normal outdoor activity is generally suitable, with routine awareness for sensitive individuals.`;
+    return { replyText: guidance, isWarning: false, suggestedQuestions: isHi ? ['आज की आउटडोर योजना', 'घर की वेंटिलेशन'] : ['Plan today outdoors', 'How should I ventilate today?'] };
+  }
+
   if (q.includes('night') && (q.includes('purifier') || q.includes('प्यूरीफायर') || q.includes('रात'))) {
     if (isHi) {
       return {

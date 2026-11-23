@@ -17,7 +17,7 @@ BreatheWell is an India-first air quality companion built for urban families. It
 
 - **Live CPCB AQI data** from the WAQI API for 8 major Indian cities (Delhi, Mumbai, Bengaluru, Kolkata, Hyderabad, Chennai, Pune, Ahmedabad)
 - **Personalised household risk engine** — scores every family member (Aarav, Priya, Dadaji, etc.) against CPCB AQI bands using their age and health condition
-- **AI health guidance** via Google Gemini 1.5 Flash, grounded in WHO/CPCB/ICMR protocols with a local RAG fallback when offline
+- **AI health guidance** via Google Gemini 2.5 Flash, grounded in WHO/CPCB/ICMR protocols with a local RAG fallback when offline
 - **Indoor air toolkit** — home checklist, Corsi-Rosenthal DIY filter guide, and an air purifier CADR room sizer
 - **Low-emission commute tracker** — log metro/cycle/WFH habits, earn streaks and CO₂ savings badges
 - **Bilingual support** — full English and Hindi (हिंदी) UI with one-tap language toggle
@@ -33,7 +33,7 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full data flow, direc
 User → React UI ↔ AppContext
                 ↕                     ↕
          aqiService.ts           geminiService.ts
-         (WAQI API live)         (Gemini 1.5 Flash)
+         (WAQI API live)         (Gemini 2.5 Flash)
                 ↕                     ↓ fallback
          riskEngine.ts           aiAssistant.ts (local RAG)
          (personalised plan)
@@ -49,7 +49,7 @@ User → React UI ↔ AppContext
 | Build | Vite 5 (Rollup, `< 200 kB` gzipped bundle) |
 | Styling | Tailwind CSS 3 (utility-first, zero runtime CSS) |
 | Charts | Recharts (SVG diurnal AQI forecast) |
-| AI | Google Gemini 1.5 Flash REST API |
+| AI | Google Gemini 2.5 Flash REST API |
 | AQI Data | WAQI REST API (8 Indian city stations) |
 | PDF | jsPDF (100% client-side, no server) |
 | State | React Context + `localStorage` (PWA-ready, offline-capable) |
@@ -106,7 +106,7 @@ npm run preview
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `VITE_GEMINI_API_KEY` | Recommended | Google Gemini 1.5 Flash API key for AI health Q&A |
+| `VITE_GEMINI_API_KEY` | Recommended | Google Gemini 2.5 Flash API key for AI health Q&A |
 | `VITE_WAQI_API_TOKEN` | Recommended | WAQI token for live station AQI data |
 | `VITE_APP_ENV` | Optional | `development` or `production` |
 
@@ -126,7 +126,7 @@ Copy `.env.example` → `.env` and fill in your values. **Never commit `.env` to
 | Family vulnerability profiles (Aarav, Priya, Dadaji) | ✅ |
 | Daily smog plan (best outdoor window, mask, ventilation) | ✅ |
 | PDF smog plan export (jsPDF) | ✅ |
-| Google Gemini 1.5 Flash AI assistant | ✅ |
+| Google Gemini 2.5 Flash AI assistant | ✅ |
 | Local RAG fallback (CPCB/WHO/ICMR grounded) | ✅ |
 | Medical triage escalation routing | ✅ |
 | Indoor toolkit (checklist, CADR calculator, Corsi-Rosenthal DIY) | ✅ |
@@ -155,7 +155,7 @@ promptwars/
 │   ├── context/AppContext.tsx   Central React state (AQI, household, language)
 │   ├── services/               Business logic + API integrations
 │   │   ├── aqiService.ts       WAQI API, CPCB AQI calc, diurnal curve
-│   │   ├── geminiService.ts    Gemini 1.5 Flash REST integration
+│   │   ├── geminiService.ts    Gemini 2.5 Flash REST integration
 │   │   ├── aiAssistant.ts      Local grounded RAG fallback
 │   │   ├── riskEngine.ts       Personalised risk + smog plan engine
 │   │   └── trackerService.ts   Habit logger + CO₂ calculator
@@ -176,7 +176,7 @@ promptwars/
 
 ## Gemini API Integration (Sponsor Tech)
 
-BreatheWell uses Google Gemini 1.5 Flash as the AI backbone for the **Ask BreatheWell** chat drawer.
+BreatheWell uses Google Gemini 2.5 Flash as the AI backbone for the **Ask BreatheWell** chat drawer.
 
 **How it's integrated (`src/services/geminiService.ts`):**
 
